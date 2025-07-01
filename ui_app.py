@@ -13,8 +13,8 @@ from langchain_openai import ChatOpenAI
 load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
 
-# Streamlit UI
-st.set_page_config(page_title="🧠 RAG Chatbot", page_icon="📄")
+# Streamlit UI setup
+st.set_page_config(page_title="🧠 RAG Chatbot with Live Document Update", page_icon="📄")
 st.title("📄 Upload or Edit TXT → Store in Supabase → Ask Questions")
 
 # Upload .txt files
@@ -29,12 +29,12 @@ if uploaded_files:
 st.markdown("---")
 st.subheader("📝 Edit & Update Any Stored Document")
 
-# Document Edit
+# Document Edit Section
 all_docs = get_all_documents()
 if all_docs:
     doc_titles = {doc["content"][:50] + "..." : doc["id"] for doc in all_docs}
     selected_title = st.selectbox("📄 Select a document to edit", list(doc_titles.keys()))
-    
+
     selected_id = doc_titles[selected_title]
     selected_doc = next((d for d in all_docs if d["id"] == selected_id), None)
 
@@ -43,7 +43,7 @@ if all_docs:
         if st.button("✅ Update Document"):
             update_document(selected_id, updated_text)
             st.success("✅ Document updated successfully!")
-            st.rerun()
+            st.rerun()  # Refresh the app to reflect changes
 
 # Divider
 st.markdown("---")
@@ -79,6 +79,7 @@ If the answer is not in the context, reply with:
             llm = ChatOpenAI(temperature=0.3, openai_api_key=openai_key, model="gpt-3.5-turbo")
             answer = llm.invoke(prompt)
 
+            # Display only the content
             st.markdown("### ✅ Answer")
             st.write(answer.content)
         else:
