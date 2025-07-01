@@ -43,7 +43,7 @@ if all_docs:
         if st.button("✅ Update Document"):
             update_document(selected_id, updated_text)
             st.success("✅ Document updated successfully!")
-            st.rerun()  # Refresh the app to reflect changes
+            st.rerun()
 
 # Divider
 st.markdown("---")
@@ -79,7 +79,6 @@ If the answer is not in the context, reply with:
             llm = ChatOpenAI(temperature=0.3, openai_api_key=openai_key, model="gpt-3.5-turbo")
             answer = llm.invoke(prompt)
 
-            # Display only the content
             st.markdown("### ✅ Answer")
             st.write(answer.content)
         else:
