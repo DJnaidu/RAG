@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
 from rag_engine import (
     insert_document,
     search_similar_documents,
@@ -9,15 +8,15 @@ from rag_engine import (
 )
 from langchain_openai import ChatOpenAI
 
-# Load API key
-load_dotenv()
-openai_key = os.getenv("OPENAI_API_KEY")
+# Load OpenAI API key securely (for Streamlit Cloud, use secrets)
+openai_key = st.secrets["OPENAI_API_KEY"]
 
 # Streamlit UI setup
 st.set_page_config(page_title="🧠 RAG Chatbot with Live Document Update", page_icon="📄")
 st.title("📄 Upload or Edit TXT → Store in Supabase → Ask Questions")
 
 # Upload .txt files
+st.caption("📎 You can upload multiple .txt files. Keep each file below ~10MB for best results.")
 uploaded_files = st.file_uploader("Upload .txt files", type="txt", accept_multiple_files=True)
 if uploaded_files:
     for file in uploaded_files:
@@ -30,7 +29,12 @@ st.markdown("---")
 st.subheader("📝 Edit & Update Any Stored Document")
 
 # Document Edit Section
-all_docs = get_all_documents()
+try:
+    all_docs = get_all_documents()
+except Exception:
+    st.error("⚠️ Failed to fetch documents from Supabase. Please check your database connection.")
+    all_docs = []
+
 if all_docs:
     doc_titles = {doc["content"][:50] + "..." : doc["id"] for doc in all_docs}
     selected_title = st.selectbox("📄 Select a document to edit", list(doc_titles.keys()))
@@ -79,7 +83,6 @@ If the answer is not in the context, reply with:
             llm = ChatOpenAI(temperature=0.3, openai_api_key=openai_key, model="gpt-3.5-turbo")
             answer = llm.invoke(prompt)
 
-            # Display only the content
             st.markdown("### ✅ Answer")
             st.write(answer.content)
         else:
