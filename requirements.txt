@@ -1,0 +1,10 @@
+openai
+streamlit
+python-dotenv
+supabase
+langchain
+langchain-community
+langchain-openai
+tiktoken
+sentence-transformers
+psycopg2-binary
