@@ -8,16 +8,17 @@ from rag_engine import (
     update_document
 )
 from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
 
-# Load API key
+# Load env vars
 load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
 
-# Streamlit UI setup
-st.set_page_config(page_title="🧠 RAG Chatbot with Live Document Update", page_icon="📄")
+# UI setup
+st.set_page_config(page_title="📄 RAG Chatbot", page_icon="🤖")
 st.title("📄 Upload or Edit TXT → Store in Supabase → Ask Questions")
 
-# Upload .txt files
+# Upload documents
 uploaded_files = st.file_uploader("Upload .txt files", type="txt", accept_multiple_files=True)
 if uploaded_files:
     for file in uploaded_files:
@@ -25,27 +26,23 @@ if uploaded_files:
         insert_document(content)
     st.success("✅ Files uploaded and stored in Supabase!")
 
-# Divider
 st.markdown("---")
 st.subheader("📝 Edit & Update Any Stored Document")
 
-# Document Edit Section
+# Edit section
 all_docs = get_all_documents()
 if all_docs:
-    doc_titles = {doc["content"][:50] + "..." : doc["id"] for doc in all_docs}
-    selected_title = st.selectbox("📄 Select a document to edit", list(doc_titles.keys()))
+    doc_map = {doc["content"][:60] + "..." : doc["id"] for doc in all_docs}
+    selected_title = st.selectbox("📄 Select a document to edit", list(doc_map.keys()))
+    selected_id = doc_map[selected_title]
+    selected_doc = next(d for d in all_docs if d["id"] == selected_id)
 
-    selected_id = doc_titles[selected_title]
-    selected_doc = next((d for d in all_docs if d["id"] == selected_id), None)
+    updated_text = st.text_area("✏️ Edit Document", selected_doc["content"], height=300)
+    if st.button("✅ Update Document"):
+        update_document(selected_id, updated_text)
+        st.success("✅ Document updated successfully!")
+        st.rerun()
 
-    if selected_doc:
-        updated_text = st.text_area("✏️ Edit Document", selected_doc["content"], height=300)
-        if st.button("✅ Update Document"):
-            update_document(selected_id, updated_text)
-            st.success("✅ Document updated successfully!")
-            st.rerun()
-
-# Divider
 st.markdown("---")
 st.subheader("💬 Ask Questions")
 
@@ -57,27 +54,25 @@ if query:
         if results:
             context = "\n\n".join(res["content"] for res in results)
 
-            prompt = f"""
-You are a helpful assistant. Your job is to answer the user's question **using only the information provided in the context below**.
+            # Optional: show retrieved context for debugging
+            # st.subheader("🧾 Retrieved Context")
+            # st.code(context)
 
-🚫 Do not use your training data.
-🚫 Do not fact-check the context or override it.
-✅ If the context says something factually wrong, treat it as true.
+            template = """You are a helpful assistant. Answer the question using **only** the context below.
+If the answer is not in the context, reply with: "I don't know."
 
-If the answer is not in the context, reply with:
-"I don't know."
-
-📄 Context:
+Context:
 {context}
 
-❓Question:
-{query}
+Question:
+{question}
 
-💬 Answer:
-"""
+Answer:"""
 
-            llm = ChatOpenAI(temperature=0.3, openai_api_key=openai_key, model="gpt-3.5-turbo")
-            answer = llm.invoke(prompt)
+            prompt = PromptTemplate.from_template(template)
+            llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3, openai_api_key=openai_key)
+            chain = prompt | llm
+            answer = chain.invoke({"context": context, "question": query})
 
             st.markdown("### ✅ Answer")
             st.write(answer.content)
