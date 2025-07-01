@@ -23,7 +23,7 @@ def get_all_documents():
 
 # Update document and re-embed it
 def update_document(doc_id: str, new_content: str):
-    new_embedding = model.encode(new_content).tolist()
+    new_embedding = embedding_model.embed_query(new_content)
     supabase.table("documents").update({
         "content": new_content,
         "embedding": new_embedding
